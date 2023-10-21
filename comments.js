@@ -1,25 +1,60 @@
-//Create a web server
+//Create web server
 var http = require('http');
 var fs = require('fs');
+var url = require('url');
+var comments = [];
+var template = require('art-template');
 
-var server = http.createServer(function(req, res){
-    console.log('Request was made: ' + req.url);
-    if(req.url === '/home' || req.url === '/'){
-        res.writeHead(200, {'Content-Type': 'text/html'});
-        fs.createReadStream(__dirname + '/index.html').pipe(res);
-    }else if(req.url === '/contact'){
-        res.writeHead(200, {'Content-Type': 'text/html'});
-        fs.createReadStream(__dirname + '/contact.html').pipe(res);
-    }else if(req.url === '/api/ninjas'){
-        var ninjas = [{name: 'Ryu', age: 29}, {name: 'Yoshi', age: 32}];
-        res.writeHead(200, {'Content-Type': 'application/json'});
-        res.end(JSON.stringify(ninjas));
-    }else{
-        res.writeHead(404, {'Content-Type': 'text/html'});
-        fs.createReadStream(__dirname + '/404.html').pipe(res);
+var server = http.createServer(function (req, res) {
+    var parseObj = url.parse(req.url, true);
+    var pathname = parseObj.pathname;
+    if (pathname === '/') {
+        fs.readFile('./views/index.html', function (err, data) {
+            if (err) {
+                return res.end('404 Not Found');
+            }
+            var htmlStr = template.render(data.toString(), {
+                comments: comments
+            });
+            res.end(htmlStr);
+        })
+    } else if (pathname === '/post') {
+        fs.readFile('./views/post.html', function (err, data) {
+            if (err) {
+                return res.end('404 Not Found');
+            }
+            res.end(data);
+        })
+    } else if (pathname.indexOf('/public/') === 0) {
+        fs.readFile('.' + pathname, function (err, data) {
+            if (err) {
+                return res.end('404 Not Found');
+            }
+            res.end(data);
+        })
+    } else if (pathname === '/pinglun') {
+        var comment = parseObj.query;
+        comment.date = '2017-11-2 17:11:22';
+        comments.push(comment);
+        res.statusCode = 302;
+        res.setHeader('Location', '/');
+        res.end();
+    } else {
+        fs.readFile('./views/404.html', function (err, data) {
+            if (err) {
+                return res.end('404 Not Found');
+            }
+            res.end(data);
+        })
     }
 });
 
-server.listen(3000, () => {
-    console.log('Server listening on port 3000');
+server.listen(3000, function () {
+    console.log('Server is running...');
 });
+            fs.readFile('./data/comments.json', function (err, data) {
+                if (err) {
+                    return console.log('Error reading file: ' + err);
+                }
+                comments = JSON.parse(data.toString());
+            });
